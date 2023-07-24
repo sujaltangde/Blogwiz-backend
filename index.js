@@ -10,21 +10,29 @@ const { createtoken } = require('./JWT');
 const { authenticateToken } = require('./JWT');
 require('dotenv').config();
 const path = require("path")
-
 const User = require('./models/User')
 const Post = require('./models/Post')
-const Category = require('./models/Category')
+const Category = require('./models/Category');
+const fileUpload = require('express-fileupload');
+const cloudinary = require('cloudinary').v2 ;
 
 
 
 
 app.use(express.json());
 app.use("/images",express.static(path.join(__dirname,"/images")))
+
 app.use(cors({
 	origin: "*",
 	credentials: true
 }))
+
 app.use(cookieParser());
+app.use(fileUpload({
+	useTempFiles:true
+}))
+
+
 
 const PORT = process.env.PORT || 5000 ;
 
@@ -41,8 +49,6 @@ app.get('/', (req, res) => {
 	res.json("All Good");
 })
 
-
-// app.use("/register",authRoute) ;
 
 
 // REGISTER ACCOUNT
@@ -175,16 +181,47 @@ app.get('/logOrNot', (req, res) => {
 
 
 
+  cloudinary.config({ 
+	cloud_name: 'dtsoqd1wr', 
+	api_key: '834366412839724', 
+	api_secret: 'maXxNTggT9teghy9t-tSiwkgWU8' 
+  });
+
+
+
+  
+
+
+
 // CREATE POST
+
 app.post('/createPost', async (req, res) => {
-	const newPost = new Post(req.body);
-	try {
-		const savePost = await newPost.save();
-		res.status(200).json({ message: "Post created successfully", savePost })
-	} catch (err) {
-		res.status(500).json(err);
+	const newPostData = req.body ;
+	const newPost = new Post(newPostData) ;
+	try{
+		const savedPost = await newPost.save() ;
+		res.status(200).json(savedPost)
+	}catch(err){
+		res.status(500).json(err) ;
 	}
-})
+	
+  });
+  
+  
+  app.post("/upload", async (req, res) => {
+	const file = req.files.photo
+	await cloudinary.uploader.upload(file.tempFilePath,(err,result)=>{
+		
+		res.json(result.secure_url)
+	})
+  });
+  
+
+
+
+
+
+
 
 // UPDATE POST
 app.put('/updatePost/:id', async (req, res) => {
@@ -261,9 +298,6 @@ app.get('/getPost/:id',async(req,res)=>{
 })
 
 
-
-
-
 // CREATE NEW CATEGORY
 app.post('/newCat',async (req,res)=>{
 	const newCat = new Category(req.body);
@@ -286,19 +320,7 @@ app.get('/getAllCat',async (req,res)=>{
 })
 
 
-const storage = multer.diskStorage({
-	destination:(req,file,cb)=>{
-		cb(null,"images");
-	},filename:(req,file,cb)=>{
-		cb(null,req.body.name);
-	}
-});
 
-const upload = multer({storage:storage});
-
-app.post("/upload",upload.single("file"),(req,res)=>{
-	res.status(200).json("File has been uploaded") ;
-})
 
 
 
